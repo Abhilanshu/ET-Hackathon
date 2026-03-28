@@ -2,6 +2,12 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import authRoutes from './routes/authRoutes.js';
 import financeRoutes from './routes/financeRoutes.js';
 import insightRoutes from './routes/insightRoutes.js';
@@ -29,6 +35,14 @@ app.use('/api/goals', goalRoutes);
 app.get('/api/health', (req, res) => {
     res.json({ status: 'active', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
 });
+
+// Serve frontend in production
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../dist')));
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
+    });
+}
 
 // Database Connection
 mongoose.connect(MONGO_URI)
