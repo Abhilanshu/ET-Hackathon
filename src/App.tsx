@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, LineChart, ShieldAlert, FileText, Users, Search, LogOut, X, Building, CheckCircle, Server, Activity, Loader2, Target } from 'lucide-react';
+import { Home, LineChart, ShieldAlert, FileText, Users, Search, LogOut, X, Building, CheckCircle, Server, Activity, Loader2, Target, TrendingDown, PiggyBank, CreditCard } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -14,6 +14,9 @@ import TaxWizard from './pages/TaxWizard';
 import CouplesPlanner from './pages/CouplesPlanner';
 import MFXray from './pages/MFXray';
 import Auth from './pages/Auth';
+import CashflowPredictor from './pages/CashflowPredictor';
+import TaxOptimizer from './pages/TaxOptimizer';
+import DebtManager from './pages/DebtManager';
 import { ChatWidget } from './components/ChatWidget';
 import { SmartNudge } from './components/SmartNudge';
 
@@ -64,6 +67,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: '/tax-wizard', label: 'Tax Wizard', icon: FileText },
     { path: '/couples-planner', label: 'Couples Planner', icon: Users },
     { path: '/mf-xray', label: 'MF X-Ray', icon: Search },
+    { path: '/cashflow', label: 'Cash Flow', icon: TrendingDown },
+    { path: '/tax-optimizer', label: 'Tax Optimizer', icon: PiggyBank },
+    { path: '/debt-manager', label: 'Debt Manager', icon: CreditCard },
   ];
 
   return (
@@ -211,6 +217,9 @@ function App() {
             <Route path="/tax-wizard" element={<ProtectedRoute><TaxWizard /></ProtectedRoute>} />
             <Route path="/couples-planner" element={<ProtectedRoute><CouplesPlanner /></ProtectedRoute>} />
             <Route path="/mf-xray" element={<ProtectedRoute><MFXray /></ProtectedRoute>} />
+            <Route path="/cashflow" element={<ProtectedRoute><CashflowPredictor /></ProtectedRoute>} />
+            <Route path="/tax-optimizer" element={<ProtectedRoute><TaxOptimizer /></ProtectedRoute>} />
+            <Route path="/debt-manager" element={<ProtectedRoute><DebtManager /></ProtectedRoute>} />
           </Routes>
         </Layout>
         <ChatWidget />
