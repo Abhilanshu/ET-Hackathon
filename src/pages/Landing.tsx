@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Landing() {
     const { isAuthenticated } = useAuth();
-    const destination = isAuthenticated ? '/dashboard' : '/login';
+    const destination = isAuthenticated ? '/dashboard' : '/login?mode=signup';
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
@@ -27,7 +27,7 @@ export default function Landing() {
                     <h2 className="logo-text" style={{ fontSize: '1.5rem', fontWeight: 800 }}>Mentor<span className="text-gradient-primary">AI</span></h2>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <Link to="/login" style={{ textDecoration: 'none', color: 'var(--text-main)', fontWeight: 600 }}>Sign In</Link>
+                    <Link to="/login?mode=login" style={{ textDecoration: 'none', color: 'var(--text-main)', fontWeight: 600 }}>Sign In</Link>
                     <Link to={destination} className="btn btn-primary">Get Started</Link>
                 </div>
             </nav>
