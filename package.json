@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "render-build": "npm install && npm run build",
-    "start": "node server/server.js",
+    "start": "NODE_ENV=production node server/server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
