@@ -19,13 +19,38 @@ export default function Goals() {
         name: '', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, deadline: ''
     });
 
+    const getOfflineGoals = (): Goal[] => {
+        try {
+            const saved = localStorage.getItem('mentorai_offline_goals');
+            if (saved) return JSON.parse(saved);
+        } catch (e) {
+            console.error(e);
+        }
+        return [
+            { _id: 'off_1', name: 'House Downpayment', targetAmount: 2500000, currentAmount: 650000, monthlyContribution: 25000, deadline: '2029-12-31' },
+            { _id: 'off_2', name: 'Retirement Buffer', targetAmount: 50000000, currentAmount: 1200000, monthlyContribution: 35000, deadline: '2045-06-30' }
+        ];
+    };
+
     const fetchGoals = async () => {
         const token = localStorage.getItem('mentorai_token');
-        if (!token) return;
+        if (!token) {
+            setGoals(getOfflineGoals());
+            return;
+        }
         try {
             const res = await fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) setGoals(await res.json());
-        } catch (e) { console.error(e); }
+            if (res.ok) {
+                const data = await res.json();
+                setGoals(data);
+                localStorage.setItem('mentorai_offline_goals', JSON.stringify(data));
+            } else {
+                setGoals(getOfflineGoals());
+            }
+        } catch (e) {
+            console.error(e);
+            setGoals(getOfflineGoals());
+        }
     };
 
     useEffect(() => {
@@ -35,8 +60,29 @@ export default function Goals() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const token = localStorage.getItem('mentorai_token');
-        const method = currentGoal._id ? 'PUT' : 'POST';
-        const url = currentGoal._id ? `/api/goals/${currentGoal._id}` : '/api/goals';
+        
+        // Offline save logic
+        const offlineGoals = getOfflineGoals();
+        if (currentGoal._id) {
+            // Edit
+            const idx = offlineGoals.findIndex(g => g._id === currentGoal._id);
+            if (idx !== -1) offlineGoals[idx] = currentGoal as Goal;
+        } else {
+            // Create
+            const newG = { ...currentGoal, _id: `off_${Date.now()}` } as Goal;
+            offlineGoals.push(newG);
+        }
+        localStorage.setItem('mentorai_offline_goals', JSON.stringify(offlineGoals));
+
+        if (!token) {
+            fetchGoals();
+            setShowModal(false);
+            setCurrentGoal({ name: '', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, deadline: '' });
+            return;
+        }
+
+        const method = currentGoal._id && !currentGoal._id.startsWith('off_') ? 'PUT' : 'POST';
+        const url = currentGoal._id && !currentGoal._id.startsWith('off_') ? `/api/goals/${currentGoal._id}` : '/api/goals';
 
         try {
             await fetch(url, {
@@ -47,15 +93,31 @@ export default function Goals() {
             fetchGoals();
             setShowModal(false);
             setCurrentGoal({ name: '', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, deadline: '' });
-        } catch (e) { console.error(e); }
+        } catch (err) {
+            console.error(err);
+            fetchGoals();
+            setShowModal(false);
+            setCurrentGoal({ name: '', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, deadline: '' });
+        }
     };
 
     const handleDelete = async (id: string) => {
+        const offlineGoals = getOfflineGoals().filter(g => g._id !== id);
+        localStorage.setItem('mentorai_offline_goals', JSON.stringify(offlineGoals));
+
         const token = localStorage.getItem('mentorai_token');
+        if (!token || id.startsWith('off_')) {
+            fetchGoals();
+            return;
+        }
+
         try {
             await fetch(`/api/goals/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             fetchGoals();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            fetchGoals();
+        }
     };
 
     return (
@@ -111,6 +173,78 @@ export default function Goals() {
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Goal Optimizer Panel */}
+            <div className="glass-panel" style={{ marginTop: '3rem', borderLeft: '4px solid var(--primary)' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                    <TrendingUp color="var(--primary)" size={20} /> MentorAI Goal Optimizer & SIP Step-Up Calculator
+                </h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                  Select a goal to simulate how stepping up your monthly SIP contributions cuts down your target years, and review asset advice.
+                </p>
+
+                {goals.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Create a goal above to run optimization analytics.</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+                    {goals.map(g => {
+                      const remaining = g.targetAmount - g.currentAmount;
+                      if (remaining <= 0) return null;
+                      
+                      const currentMonthly = g.monthlyContribution || 1000;
+                      const flatMonths = remaining / currentMonthly;
+                      
+                      let stepUpMonths = 0;
+                      let accumulated = 0;
+                      let activeSIP = currentMonthly;
+                      const maxSimulatedMonths = 360;
+
+                      while (accumulated < remaining && stepUpMonths < maxSimulatedMonths) {
+                        stepUpMonths++;
+                        accumulated += activeSIP;
+                        if (stepUpMonths % 12 === 0) {
+                          activeSIP *= 1.10; // 10% step-up each year
+                        }
+                      }
+
+                      const flatYears = flatMonths / 12;
+                      const stepUpYears = stepUpMonths / 12;
+                      const yearsSaved = Math.max(0, flatYears - stepUpYears);
+
+                      // Asset recommendations based on years to deadline
+                      const deadlineDate = new Date(g.deadline);
+                      const yearsToDeadline = Math.max(0.1, (deadlineDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+                      
+                      let assetAdvice = 'Aggressive Equity Index Funds (80% Equity / 20% Debt)';
+                      if (yearsToDeadline < 3) {
+                        assetAdvice = 'Preservation Core (100% Fixed Deposits & Liquid Funds)';
+                      } else if (yearsToDeadline < 5) {
+                        assetAdvice = 'Balanced Allocation (50% Equity Index / 50% Arbitrage & Debt Funds)';
+                      }
+
+                      return (
+                        <div key={g._id} style={{ background: 'var(--bg-light-elem)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          <h4 style={{ fontSize: '1rem', fontWeight: 700, borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>{g.name}</h4>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span>Deadline Horizon:</span>
+                              <strong style={{ color: 'var(--text-main)' }}>{yearsToDeadline.toFixed(1)} years</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span>10% Annual Step-up saves:</span>
+                              <strong style={{ color: 'var(--secondary)' }}>{yearsSaved.toFixed(1)} years</strong>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.5rem' }}>
+                              <span>Recommended Asset Allocation:</span>
+                              <strong style={{ color: 'var(--primary)' }}>{assetAdvice}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
             </div>
 
             {showModal && (

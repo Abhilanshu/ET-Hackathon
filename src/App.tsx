@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, LineChart, ShieldAlert, FileText, Users, Search, LogOut, X, Building, CheckCircle, Server, Activity, Loader2, Target, TrendingDown, PiggyBank, CreditCard } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { Home, LineChart, ShieldAlert, FileText, Users, Search, LogOut, X, Building, CheckCircle, Server, Activity, Loader2, Target, TrendingDown, PiggyBank, CreditCard, Scale, Receipt, Coins, Lock, GraduationCap } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -17,6 +17,14 @@ import Auth from './pages/Auth';
 import CashflowPredictor from './pages/CashflowPredictor';
 import TaxOptimizer from './pages/TaxOptimizer';
 import DebtManager from './pages/DebtManager';
+import ExpensesTracker from './pages/ExpensesTracker';
+import InvestmentsTracker from './pages/InvestmentsTracker';
+import PortfolioRebalancer from './pages/PortfolioRebalancer';
+import TaxHarvester from './pages/TaxHarvester';
+import DrawdownSimulator from './pages/DrawdownSimulator';
+import NomineeVault from './pages/NomineeVault';
+import EducationPlanner from './pages/EducationPlanner';
+import BankAnalyzer from './pages/BankAnalyzer';
 import { ChatWidget } from './components/ChatWidget';
 import { SmartNudge } from './components/SmartNudge';
 
@@ -28,11 +36,52 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout, connectBankToDB } = useAuth();
 
   const [showBankModal, setShowBankModal] = useState(false);
   const [bankStep, setBankStep] = useState<'select' | 'connecting' | 'success'>('select');
   const [showSystemModal, setShowSystemModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  const searchRoutes = [
+    { path: '/dashboard', keywords: ['dashboard', 'home', 'overview', 'score'] },
+    { path: '/goals', keywords: ['goals', 'goal', 'target', 'milestone', 'sip', 'savings'] },
+    { path: '/bank-analyzer', keywords: ['bank', 'account', 'subscription', 'upi', 'transactions', 'sweep'] },
+    { path: '/expenses', keywords: ['expenses', 'spending', 'budget', 'daily', 'food', 'bills'] },
+    { path: '/investments', keywords: ['stocks', 'gold', 'nifty', 'portfolio', 'shares', 'invest'] },
+    { path: '/rebalancer', keywords: ['rebalancer', 'asset', 'allocation', 'rebalance'] },
+    { path: '/tax-harvester', keywords: ['tax loss', 'harvesting', 'ltcg', 'stcg'] },
+    { path: '/drawdown-simulator', keywords: ['drawdown', 'retirement', 'withdrawal'] },
+    { path: '/nominee-vault', keywords: ['nominee', 'vault', 'will', 'estate'] },
+    { path: '/education-planner', keywords: ['education', 'college', 'school', 'child'] },
+    { path: '/fire-planner', keywords: ['fire', 'financial independence', 'retire early'] },
+    { path: '/life-events', keywords: ['life events', 'marriage', 'baby', 'job'] },
+    { path: '/risk-simulator', keywords: ['risk', 'crisis', 'simulation', 'crash'] },
+    { path: '/tax-wizard', keywords: ['tax', 'itr', 'deductions', '80c', 'tax wizard'] },
+    { path: '/couples-planner', keywords: ['couples', 'partner', 'spouse', 'joint'] },
+    { path: '/mf-xray', keywords: ['mutual fund', 'mf xray', 'overlap', 'fund analysis'] },
+    { path: '/cashflow', keywords: ['cashflow', 'cash flow', 'runway', 'income'] },
+    { path: '/tax-optimizer', keywords: ['tax optimizer', 'regime', 'new tax', 'old tax'] },
+    { path: '/debt-manager', keywords: ['debt', 'loan', 'emi', 'avalanche', 'snowball'] },
+  ];
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = searchRoutes.find(r => r.keywords.some(k => q.includes(k)));
+      if (match) {
+        navigate(match.path);
+        setSearchQuery('');
+        setShowSearchResults(false);
+      }
+    }
+  };
+
+  const filteredResults = searchQuery.trim()
+    ? searchRoutes.filter(r => r.keywords.some(k => k.includes(searchQuery.toLowerCase())))
+    : [];
 
   const handleBankConnect = async (bankName: string) => {
     setBankStep('connecting');
@@ -61,6 +110,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/goals', label: 'Financial Goals', icon: Target },
+    { path: '/bank-analyzer', label: 'Bank Intelligence', icon: Building },
+    { path: '/expenses', label: 'Daily Expenses', icon: Receipt },
+    { path: '/investments', label: 'Stocks & Gold', icon: Coins },
+    { path: '/rebalancer', label: 'Asset Rebalancer', icon: Scale },
+    { path: '/tax-harvester', label: 'Tax Harvester', icon: TrendingDown },
+    { path: '/drawdown-simulator', label: 'Drawdown Engine', icon: LineChart },
+    { path: '/nominee-vault', label: 'Nominee Vault', icon: Lock },
+    { path: '/education-planner', label: 'Education Planner', icon: GraduationCap },
     { path: '/fire-planner', label: 'FIRE Planner', icon: LineChart },
     { path: '/life-events', label: 'Life Events', icon: ShieldAlert },
     { path: '/risk-simulator', label: 'Risk Engine', icon: Activity },
@@ -74,49 +131,70 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="app-container">
-      <nav className="sidebar glass-panel">
-        <div className="logo-container">
+      <nav className="sidebar glass-panel" style={{ height: '100vh', overflowY: 'auto', position: 'sticky', top: 0 }}>
+        <div className="logo-container" style={{ marginBottom: '2rem' }}>
           <div className="logo-icon">▲</div>
           <h2 className="logo-text">Mentor<span className="text-gradient-primary">AI</span></h2>
         </div>
 
-        <ul className="nav-links">
+        <ul className="nav-links" style={{ gap: '0.25rem' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
             return (
               <li key={item.path}>
-                <Link to={item.path} className={`nav-link ${isActive ? 'active' : ''}`}>
-                  <Icon size={20} />
-                  <span>{item.label}</span>
+                <Link to={item.path} className={`nav-link ${isActive ? 'active' : ''}`} style={{ padding: '0.75rem 1rem' }}>
+                  <Icon size={18} />
+                  <span style={{ fontSize: '0.9rem' }}>{item.label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
 
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" style={{ marginTop: '1.5rem', paddingTop: '0.75rem' }}>
           <div className="user-profile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div className="avatar">{user?.name?.charAt(0).toUpperCase() || 'U'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>{user?.name?.charAt(0).toUpperCase() || 'U'}</div>
               <div className="user-info">
-                <p className="user-name">{user?.name || 'User'}</p>
-                <p className="user-status" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user?.email}</p>
+                <p className="user-name" style={{ fontSize: '0.85rem' }}>{user?.name || 'User'}</p>
+                <p className="user-status" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user?.email}</p>
               </div>
             </div>
             <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} title="Logout">
-              <LogOut size={18} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="main-content">
+      <main className="main-content" style={{ minHeight: '100vh' }}>
         <header className="top-header glass-panel">
-          <div className="header-search">
+          <div className="header-search" style={{ position: 'relative' }}>
             <Search size={18} />
-            <input type="text" placeholder="Ask MentorAI anything..." />
+            <input
+              type="text"
+              placeholder="Search pages — goals, tax, bank, stocks..."
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+              onKeyDown={handleSearch}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+              onFocus={() => setShowSearchResults(true)}
+            />
+            {showSearchResults && filteredResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-light)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', zIndex: 200, overflow: 'hidden', marginTop: '4px', boxShadow: 'var(--shadow-glass)' }}>
+                {filteredResults.slice(0, 5).map(r => (
+                  <button
+                    key={r.path}
+                    onMouseDown={() => { navigate(r.path); setSearchQuery(''); setShowSearchResults(false); }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', borderBottom: '1px solid var(--glass-border)', fontSize: '0.9rem' }}
+                  >
+                    {r.path.replace('/', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Dashboard'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="header-actions">
             <button className="btn btn-outline" onClick={() => { setShowBankModal(true); setBankStep('select'); }}>Connect Bank</button>
@@ -211,6 +289,14 @@ function App() {
             <Route path="/login" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><ExpensesTracker /></ProtectedRoute>} />
+            <Route path="/investments" element={<ProtectedRoute><InvestmentsTracker /></ProtectedRoute>} />
+            <Route path="/rebalancer" element={<ProtectedRoute><PortfolioRebalancer /></ProtectedRoute>} />
+            <Route path="/tax-harvester" element={<ProtectedRoute><TaxHarvester /></ProtectedRoute>} />
+            <Route path="/drawdown-simulator" element={<ProtectedRoute><DrawdownSimulator /></ProtectedRoute>} />
+            <Route path="/nominee-vault" element={<ProtectedRoute><NomineeVault /></ProtectedRoute>} />
+            <Route path="/education-planner" element={<ProtectedRoute><EducationPlanner /></ProtectedRoute>} />
+            <Route path="/bank-analyzer" element={<ProtectedRoute><BankAnalyzer /></ProtectedRoute>} />
             <Route path="/risk-simulator" element={<ProtectedRoute><RiskSimulator /></ProtectedRoute>} />
             <Route path="/fire-planner" element={<ProtectedRoute><FirePlanner /></ProtectedRoute>} />
             <Route path="/life-events" element={<ProtectedRoute><LifeEvents /></ProtectedRoute>} />

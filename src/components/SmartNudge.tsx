@@ -29,7 +29,7 @@ export function SmartNudge() {
                 <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}><X size={16} /></button>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.4 }}>
-                Your ₹{portfolio.sipAmount.toLocaleString('en-IN')} monthly SIP is active via {portfolio.bankName}. Make sure your mandate is valid.
+                Your ₹{portfolio?.sipAmount?.toLocaleString('en-IN')} monthly SIP is active via {portfolio?.bankName}. Make sure your mandate is valid.
             </p>
         </div>
     );

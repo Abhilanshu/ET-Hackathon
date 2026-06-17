@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MoneyHealthScore } from '../components/MoneyHealthScore';
 import { Target, Activity, TrendingUp, X, Calculator, Building, AlertTriangle, Lightbulb, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -14,8 +15,12 @@ type Insight = {
 
 export default function Dashboard() {
   const { portfolio } = useAuth();
-  const [showWizard, setShowWizard] = useState(true);
-  const [healthScore, setHealthScore] = useState<number | null>(null);
+  const navigate = useNavigate();
+
+  // Persist wizard completion so it doesn't repeat every login
+  const savedScore = Number(localStorage.getItem('mentorai_health_score') || '0');
+  const [showWizard, setShowWizard] = useState(!savedScore);
+  const [healthScore, setHealthScore] = useState<number | null>(savedScore || null);
 
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [insuranceForm, setInsuranceForm] = useState({ income: 1500000, loans: 500000, age: 30 });
@@ -53,6 +58,7 @@ export default function Dashboard() {
 
   const handleWizardComplete = (score: number) => {
     setHealthScore(score);
+    localStorage.setItem('mentorai_health_score', String(score));
     setShowWizard(false);
   };
 
@@ -77,6 +83,13 @@ export default function Dashboard() {
           <h1>Your Financial <span className="text-gradient">Command Center</span></h1>
           <p style={{ marginTop: '0.5rem', fontSize: '1.1rem' }}>Your financial snapshot is verified. Here's what to do next.</p>
         </div>
+        <button
+          className="btn btn-outline"
+          onClick={() => { setShowInsuranceModal(true); setIdealCover(null); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+        >
+          <Calculator size={18} /> Insurance Calculator
+        </button>
       </div>
 
       <div className="dashboard-grid">
@@ -188,8 +201,8 @@ export default function Dashboard() {
 
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       {insight.category === 'emergency_fund' && <button className="btn btn-outline" style={{ flex: 1, padding: '0.5rem' }}>Explore Liquids</button>}
-                      {insight.category === 'tax' && <button className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => window.location.href = '/tax-wizard'}>Run Tax Wizard</button>}
-                      {insight.category === 'overlap' && <button className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => window.location.href = '/mf-xray'}>Run X-Ray</button>}
+                      {insight.category === 'tax' && <button className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => navigate('/tax-wizard')}>Run Tax Wizard</button>}
+                      {insight.category === 'overlap' && <button className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => navigate('/mf-xray')}>Run X-Ray</button>}
 
                       <button className="btn" onClick={() => dismissInsight(insight._id)} style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--glass-border)', background: 'transparent' }}>Dismiss</button>
                     </div>

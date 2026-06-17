@@ -1,7 +1,11 @@
 import { ArrowRight, ShieldCheck, Zap, TrendingUp, Lock, CheckCircle, PieChart, Building } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Landing() {
+    const { isAuthenticated } = useAuth();
+    const destination = isAuthenticated ? '/dashboard' : '/login';
+
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
             {/* Navigation */}
@@ -24,7 +28,7 @@ export default function Landing() {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <Link to="/login" style={{ textDecoration: 'none', color: 'var(--text-main)', fontWeight: 600 }}>Sign In</Link>
-                    <Link to="/dashboard" className="btn btn-primary">Get Started</Link>
+                    <Link to={destination} className="btn btn-primary">Get Started</Link>
                 </div>
             </nav>
 
@@ -60,7 +64,7 @@ export default function Landing() {
                 </p>
 
                 <div style={{ display: 'flex', gap: '1.5rem', animation: 'fadeInUp 0.8s 0.3s forwards', opacity: 0, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Link to="/dashboard" className="btn btn-primary btn-pulse" style={{ padding: '1.2rem 3rem', fontSize: '1.15rem' }}>
+                    <Link to={destination} className="btn btn-primary btn-pulse" style={{ padding: '1.2rem 3rem', fontSize: '1.15rem' }}>
                         Enter Command Center <ArrowRight size={20} />
                     </Link>
                     <a href="#features" className="btn btn-outline" style={{ padding: '1.2rem 3rem', fontSize: '1.15rem', background: 'var(--bg-glass)', backdropFilter: 'blur(10px)' }}>
@@ -196,7 +200,7 @@ export default function Landing() {
                 <div className="glass-panel" style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 10, background: 'rgba(255,255,255,0.8)' }}>
                     <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>Ready to optimize your wealth?</h2>
                     <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '2.5rem' }}>Stop leaving money on the table. Join 50,000+ smart investors using MentorAI.</p>
-                    <Link to="/dashboard" className="btn btn-primary btn-pulse" style={{ padding: '1.2rem 4rem', fontSize: '1.25rem' }}>
+                    <Link to={destination} className="btn btn-primary btn-pulse" style={{ padding: '1.2rem 4rem', fontSize: '1.25rem' }}>
                         Get Started Free
                     </Link>
                 </div>

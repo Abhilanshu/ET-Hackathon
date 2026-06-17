@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard, Plus, Trash2, TrendingDown, Zap, Trophy, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Plus, Trash2, TrendingDown, Zap, Trophy, BarChart3, ChevronDown, ChevronUp, Scale } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Debt {
@@ -122,6 +122,10 @@ export default function DebtManager() {
     name: '', type: 'personal_loan', balance: 0, interestRate: 0, minimumPayment: 0,
   });
 
+  const [optLoanId, setOptLoanId] = useState<string>('2');
+  const [optSurplus, setOptSurplus] = useState<number>(10000);
+  const [optTaxRate, setOptTaxRate] = useState<number>(30);
+
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
   const totalMinPayment = debts.reduce((s, d) => s + d.minimumPayment, 0);
 
@@ -132,6 +136,74 @@ export default function DebtManager() {
   const best = winner === 'avalanche' ? avalanche : snowball;
   const interestSaved = minimum.totalInterestPaid - best.totalInterestPaid;
   const monthsSaved = minimum.months - best.months;
+
+  const prepayVsReinvest = useMemo(() => {
+    const selectedLoan = debts.find(d => d.id === optLoanId) || debts[0];
+    if (!selectedLoan) return null;
+
+    const monthsToSimulate = 60;
+    
+    let balA = selectedLoan.balance;
+    let interestPaidA = 0;
+    
+    let balB = selectedLoan.balance;
+    let interestPaidB = 0;
+    let sipValue = 0;
+    
+    const monthlyRate = selectedLoan.interestRate / 100 / 12;
+    const monthlySipRate = 0.12 / 12;
+    
+    for (let m = 1; m <= monthsToSimulate; m++) {
+      if (balA > 0) {
+        const interest = balA * monthlyRate;
+        interestPaidA += interest;
+        balA += interest;
+        const basePayment = Math.min(selectedLoan.minimumPayment, balA);
+        balA -= basePayment;
+        const extraPrepay = Math.min(optSurplus, balA);
+        balA -= extraPrepay;
+        balA = Math.max(0, balA);
+      }
+      
+      if (balB > 0) {
+        const interest = balB * monthlyRate;
+        interestPaidB += interest;
+        balB += interest;
+        const basePayment = Math.min(selectedLoan.minimumPayment, balB);
+        balB -= basePayment;
+        balB = Math.max(0, balB);
+      }
+      
+      sipValue += optSurplus;
+      sipValue += sipValue * monthlySipRate;
+    }
+
+    const interestSavedVal = interestPaidB - interestPaidA;
+    let taxSaved24b = 0;
+    if (selectedLoan.type === 'home_loan') {
+      taxSaved24b = interestSavedVal * (optTaxRate / 100);
+    }
+    
+    const pathANetBenefit = interestSavedVal + taxSaved24b;
+    const sipGains = Math.max(0, sipValue - (optSurplus * monthsToSimulate));
+    const ltcgTax = sipGains * 0.10;
+    const pathBNetBenefit = sipValue - ltcgTax;
+    
+    const isPrepayBetter = pathANetBenefit > (pathBNetBenefit - interestSavedVal);
+
+    return {
+      loanName: selectedLoan.name,
+      loanType: selectedLoan.type,
+      interestSaved: interestSavedVal,
+      taxSaved24b,
+      pathANetBenefit: Math.round(pathANetBenefit),
+      sipValue: Math.round(sipValue),
+      ltcgTax: Math.round(ltcgTax),
+      pathBNetBenefit: Math.round(pathBNetBenefit),
+      isPrepayBetter,
+      netDiff: Math.round(Math.abs(pathANetBenefit - (pathBNetBenefit - interestSavedVal)))
+    };
+  }, [debts, optLoanId, optSurplus, optTaxRate]);
 
   const addDebt = () => {
     if (!newDebt.name || newDebt.balance <= 0 || newDebt.interestRate <= 0) return;
@@ -392,7 +464,7 @@ export default function DebtManager() {
               <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.2)' }}>
                 <div>
                   <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Minimum Payments Only (Baseline)</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>What happens if you only pay the minimums every month</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>What happens if you only pay the minimums every month</p>
                 </div>
                 <div style={{ display: 'flex', gap: '2rem' }}>
                   <div style={{ textAlign: 'center' }}>
@@ -405,6 +477,104 @@ export default function DebtManager() {
                   </div>
                 </div>
               </div>
+
+              {/* Prepayment vs Reinvest Optimizer */}
+              {prepayVsReinvest && (
+                <div className="glass-panel" style={{ marginTop: '2rem', borderTop: '4px solid var(--primary)' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <Scale color="var(--primary)" size={20} /> Prepay Loan vs. Reinvest SIP Optimizer (5-Year Horizon)
+                  </h3>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                    Find the absolute mathematical winner between prepaying your loan principal vs investing the monthly surplus in a Nifty 50 Equity SIP.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select Target Loan</label>
+                      <select value={optLoanId} onChange={e => setOptLoanId(e.target.value)} style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                        {debts.map(d => <option key={d.id} value={d.id}>{d.name} ({d.interestRate}%)</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Monthly Surplus Capital (₹)</label>
+                      <input type="number" value={optSurplus} onChange={e => setOptSurplus(Number(e.target.value))} style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)' }} />
+                    </div>
+
+                    {prepayVsReinvest.loanType === 'home_loan' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Income Tax Slab Rate (%)</label>
+                        <select value={optTaxRate} onChange={e => setOptTaxRate(Number(e.target.value))} style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                          <option value={5}>5% Slab</option>
+                          <option value={10}>10% Slab</option>
+                          <option value={15}>15% Slab</option>
+                          <option value={20}>20% Slab</option>
+                          <option value={30}>30% Slab</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Verdict Banner */}
+                  <div style={{ padding: '1.25rem', background: 'var(--bg-light-elem)', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: prepayVsReinvest.isPrepayBetter ? 'rgba(16,185,129,0.15)' : 'rgba(249,115,22,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Scale color={prepayVsReinvest.isPrepayBetter ? 'var(--secondary)' : 'var(--primary)'} size={24} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>MentorAI Mathematical Verdict</span>
+                      <h4 style={{ margin: 0, fontSize: '1.15rem', color: prepayVsReinvest.isPrepayBetter ? 'var(--secondary)' : 'var(--primary)' }}>
+                        {prepayVsReinvest.isPrepayBetter ? 'Prepaying the Loan is superior!' : 'Reinvesting in Equity SIP is superior!'}
+                      </h4>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                        Choosing the winning path boosts your net worth by <strong>{FMT(prepayVsReinvest.netDiff)}</strong> over 5 years.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Side-by-Side details */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    {/* Path A */}
+                    <div style={{ background: 'var(--bg-light-elem)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: `1px solid ${prepayVsReinvest.isPrepayBetter ? 'var(--secondary)' : 'var(--glass-border)'}` }}>
+                      <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '0.75rem', color: 'var(--text-main)' }}>Path A: Prepay Principal</strong>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Interest Cost Saved:</span>
+                          <strong style={{ color: 'var(--secondary)' }}>{FMT(prepayVsReinvest.interestSaved)}</strong>
+                        </div>
+                        {prepayVsReinvest.loanType === 'home_loan' && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Section 24b Tax Saved:</span>
+                            <strong style={{ color: 'var(--secondary)' }}>{FMT(prepayVsReinvest.taxSaved24b)}</strong>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '0.5rem', fontWeight: 700 }}>
+                          <span>Total Net Value Boost:</span>
+                          <span>{FMT(prepayVsReinvest.pathANetBenefit)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Path B */}
+                    <div style={{ background: 'var(--bg-light-elem)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: `1px solid ${!prepayVsReinvest.isPrepayBetter ? 'var(--primary)' : 'var(--glass-border)'}` }}>
+                      <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '0.75rem', color: 'var(--text-main)' }}>Path B: Nifty SIP (12%)</strong>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>SIP Ending Value:</span>
+                          <strong style={{ color: 'var(--primary)' }}>{FMT(prepayVsReinvest.sipValue)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Est. Capital Gains Tax:</span>
+                          <strong style={{ color: 'var(--accent)' }}>-{FMT(prepayVsReinvest.ltcgTax)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '0.5rem', fontWeight: 700 }}>
+                          <span>Total Net Wealth Boost:</span>
+                          <span>{FMT(prepayVsReinvest.pathBNetBenefit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
