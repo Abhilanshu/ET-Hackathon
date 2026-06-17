@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TrendingDown, Info, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface AssetHolding {
   id: string;
@@ -13,11 +14,11 @@ interface AssetHolding {
 const FMT = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 export default function TaxHarvester() {
-  const [holdings, setHoldings] = useState<AssetHolding[]>([
-    { id: '1', name: 'Nifty Index Fund - UTI', purchaseDate: '2024-03-12', purchaseNAV: 110, currentNAV: 145, units: 3500 },
-    { id: '2', name: 'Parag Parikh Flexi Cap Fund', purchaseDate: '2025-10-15', purchaseNAV: 65, currentNAV: 78, units: 2200 },
-    { id: '3', name: 'Reliance Industries Stock', purchaseDate: '2026-02-10', purchaseNAV: 2400, currentNAV: 2950, units: 10 }
-  ]);
+  const { userKey } = useAuth();
+  const HOLDINGS_KEY = userKey('tax_harvest_holdings');
+  const HARVESTED_KEY = userKey('harvested_this_year');
+
+  const [holdings, setHoldings] = useState<AssetHolding[]>([]);
 
   const [harvestedThisYear, setHarvestedThisYear] = useState<number>(0);
   const [showForm, setShowForm] = useState(false);
@@ -31,19 +32,19 @@ export default function TaxHarvester() {
 
   // Load from local storage or pre-populate
   useEffect(() => {
-    const saved = localStorage.getItem('mentorai_tax_harvest_holdings');
+    const saved = localStorage.getItem(HOLDINGS_KEY);
     if (saved) {
       try { setHoldings(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
-    const savedHarvested = localStorage.getItem('mentorai_harvested_this_year');
+    const savedHarvested = localStorage.getItem(HARVESTED_KEY);
     if (savedHarvested) {
       setHarvestedThisYear(Number(savedHarvested));
     }
-  }, []);
+  }, [HOLDINGS_KEY, HARVESTED_KEY]);
 
   const saveHoldings = (updated: AssetHolding[]) => {
     setHoldings(updated);
-    localStorage.setItem('mentorai_tax_harvest_holdings', JSON.stringify(updated));
+    localStorage.setItem(HOLDINGS_KEY, JSON.stringify(updated));
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -72,7 +73,7 @@ export default function TaxHarvester() {
 
   const handleHarvestChange = (val: number) => {
     setHarvestedThisYear(val);
-    localStorage.setItem('mentorai_harvested_this_year', val.toString());
+    localStorage.setItem(HARVESTED_KEY, val.toString());
   };
 
   // Calculations

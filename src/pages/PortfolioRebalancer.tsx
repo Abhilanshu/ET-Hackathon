@@ -18,7 +18,9 @@ const PRESETS: Record<'aggressive' | 'balanced' | 'conservative', Allocation> = 
 const FMT = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
 export default function PortfolioRebalancer() {
-  const { portfolio } = useAuth();
+  const { portfolio, userKey } = useAuth();
+  const STOCKS_KEY = userKey('investments_stocks');
+  const GOLD_KEY = userKey('investments_gold');
   
   const [profile, setProfile] = useState<'aggressive' | 'balanced' | 'conservative' | 'custom'>('balanced');
   const [customTarget, setCustomTarget] = useState<Allocation>({ equity: 50, debt: 35, gold: 10, cash: 5 });
@@ -39,7 +41,7 @@ export default function PortfolioRebalancer() {
     }
 
     // 2. Fetch stocks from investments tracker
-    const savedStocks = localStorage.getItem('mentorai_investments_stocks');
+    const savedStocks = localStorage.getItem(STOCKS_KEY);
     if (savedStocks) {
       try {
         const parsed = JSON.parse(savedStocks);
@@ -49,7 +51,7 @@ export default function PortfolioRebalancer() {
     }
 
     // 3. Fetch gold from investments tracker
-    const savedGold = localStorage.getItem('mentorai_investments_gold');
+    const savedGold = localStorage.getItem(GOLD_KEY);
     let goldVal = 180000; // default gold if empty
     if (savedGold) {
       try {
@@ -64,7 +66,7 @@ export default function PortfolioRebalancer() {
       gold: goldVal,
       cash: cashVal,
     });
-  }, [portfolio]);
+  }, [portfolio, STOCKS_KEY, GOLD_KEY]);
 
   const target = useMemo(() => {
     if (profile === 'custom') return customTarget;

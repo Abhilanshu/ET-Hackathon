@@ -14,11 +14,12 @@ type Insight = {
 };
 
 export default function Dashboard() {
-  const { portfolio } = useAuth();
+  const { portfolio, userKey } = useAuth();
   const navigate = useNavigate();
+  const SCORE_KEY = userKey('health_score');
 
   // Persist wizard completion so it doesn't repeat every login
-  const savedScore = Number(localStorage.getItem('mentorai_health_score') || '0');
+  const savedScore = Number(localStorage.getItem(SCORE_KEY) || '0');
   const [showWizard, setShowWizard] = useState(!savedScore);
   const [healthScore, setHealthScore] = useState<number | null>(savedScore || null);
 
@@ -58,7 +59,7 @@ export default function Dashboard() {
 
   const handleWizardComplete = (score: number) => {
     setHealthScore(score);
-    localStorage.setItem('mentorai_health_score', String(score));
+    localStorage.setItem(SCORE_KEY, String(score));
     setShowWizard(false);
   };
 

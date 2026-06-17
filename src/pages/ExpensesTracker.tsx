@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Receipt, Plus, Trash2, Calendar, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Expense {
   id: string;
@@ -23,6 +24,9 @@ const CATEGORY_COLORS: Record<Expense['category'], string> = {
 const FMT = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export default function ExpensesTracker() {
+  const { userKey } = useAuth();
+  const EXP_KEY = userKey('expenses');
+  const BUDGET_KEY = userKey('expense_budget');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [form, setForm] = useState({
     amount: '',
@@ -34,7 +38,7 @@ export default function ExpensesTracker() {
 
   // Load from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('mentorai_expenses');
+    const saved = localStorage.getItem(EXP_KEY);
     if (saved) {
       try {
         setExpenses(JSON.parse(saved));
@@ -42,16 +46,16 @@ export default function ExpensesTracker() {
         console.error(e);
       }
     }
-    const savedBudget = localStorage.getItem('mentorai_expense_budget');
+    const savedBudget = localStorage.getItem(BUDGET_KEY);
     if (savedBudget) {
       setMonthlyBudget(Number(savedBudget));
     }
-  }, []);
+  }, [EXP_KEY]);
 
   // Save to localStorage
   const saveExpenses = (newExpenses: Expense[]) => {
     setExpenses(newExpenses);
-    localStorage.setItem('mentorai_expenses', JSON.stringify(newExpenses));
+    localStorage.setItem(EXP_KEY, JSON.stringify(newExpenses));
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -84,7 +88,7 @@ export default function ExpensesTracker() {
 
   const handleBudgetChange = (val: number) => {
     setMonthlyBudget(val);
-    localStorage.setItem('mentorai_expense_budget', val.toString());
+    localStorage.setItem(BUDGET_KEY, val.toString());
   };
 
   // Calculations

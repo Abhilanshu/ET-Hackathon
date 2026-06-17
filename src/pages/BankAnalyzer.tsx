@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Building, ShieldCheck, ArrowRight, Loader2, Sparkles, RefreshCw, AlertTriangle, Eye, HelpCircle, CheckCircle, Info } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface BankTransaction {
   id: string;
@@ -98,6 +99,9 @@ const MOCK_TRANSACTIONS: BankTransaction[] = [
 const FMT = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export default function BankAnalyzer() {
+  const { userKey } = useAuth();
+  const BANK_CONN_KEY = userKey('bank_connected');
+  const BANK_NAME_KEY = userKey('bank_name');
   // Connection states: 'disconnected' | 'otp_sent' | 'linking' | 'connected'
   const [connState, setConnState] = useState<'disconnected' | 'otp_sent' | 'linking' | 'connected'>('disconnected');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
@@ -144,8 +148,8 @@ export default function BankAnalyzer() {
           if (next >= 100) {
             clearInterval(t);
             setConnState('connected');
-            localStorage.setItem('mentorai_bank_connected', 'true');
-            localStorage.setItem('mentorai_bank_name', selectedBank);
+            localStorage.setItem(BANK_CONN_KEY, 'true');
+            localStorage.setItem(BANK_NAME_KEY, selectedBank);
             return 100;
           }
           return next;
@@ -157,13 +161,13 @@ export default function BankAnalyzer() {
 
   // Pre-load connection state
   useEffect(() => {
-    const isConn = localStorage.getItem('mentorai_bank_connected');
-    const bName = localStorage.getItem('mentorai_bank_name');
+    const isConn = localStorage.getItem(BANK_CONN_KEY);
+    const bName = localStorage.getItem(BANK_NAME_KEY);
     if (isConn === 'true') {
       setConnState('connected');
       if (bName) setSelectedBank(bName);
     }
-  }, []);
+  }, [BANK_CONN_KEY]);
 
   const handleSendOTP = (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,8 +192,8 @@ export default function BankAnalyzer() {
       setPhone('');
       setOtp('');
       setConsentApproved(false);
-      localStorage.removeItem('mentorai_bank_connected');
-      localStorage.removeItem('mentorai_bank_name');
+      localStorage.removeItem(BANK_CONN_KEY);
+      localStorage.removeItem(BANK_NAME_KEY);
     }
   };
 

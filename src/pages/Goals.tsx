@@ -12,7 +12,8 @@ type Goal = {
 };
 
 export default function Goals() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, userKey } = useAuth();
+    const GOALS_KEY = userKey('offline_goals');
     const [goals, setGoals] = useState<Goal[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [currentGoal, setCurrentGoal] = useState<Partial<Goal>>({
@@ -21,15 +22,12 @@ export default function Goals() {
 
     const getOfflineGoals = (): Goal[] => {
         try {
-            const saved = localStorage.getItem('mentorai_offline_goals');
+            const saved = localStorage.getItem(GOALS_KEY);
             if (saved) return JSON.parse(saved);
         } catch (e) {
             console.error(e);
         }
-        return [
-            { _id: 'off_1', name: 'House Downpayment', targetAmount: 2500000, currentAmount: 650000, monthlyContribution: 25000, deadline: '2029-12-31' },
-            { _id: 'off_2', name: 'Retirement Buffer', targetAmount: 50000000, currentAmount: 1200000, monthlyContribution: 35000, deadline: '2045-06-30' }
-        ];
+        return []; // New users start with empty goals
     };
 
     const fetchGoals = async () => {
@@ -43,7 +41,7 @@ export default function Goals() {
             if (res.ok) {
                 const data = await res.json();
                 setGoals(data);
-                localStorage.setItem('mentorai_offline_goals', JSON.stringify(data));
+                localStorage.setItem(GOALS_KEY, JSON.stringify(data));
             } else {
                 setGoals(getOfflineGoals());
             }
@@ -72,7 +70,7 @@ export default function Goals() {
             const newG = { ...currentGoal, _id: `off_${Date.now()}` } as Goal;
             offlineGoals.push(newG);
         }
-        localStorage.setItem('mentorai_offline_goals', JSON.stringify(offlineGoals));
+        localStorage.setItem(GOALS_KEY, JSON.stringify(offlineGoals));
 
         if (!token) {
             fetchGoals();
@@ -103,7 +101,7 @@ export default function Goals() {
 
     const handleDelete = async (id: string) => {
         const offlineGoals = getOfflineGoals().filter(g => g._id !== id);
-        localStorage.setItem('mentorai_offline_goals', JSON.stringify(offlineGoals));
+        localStorage.setItem(GOALS_KEY, JSON.stringify(offlineGoals));
 
         const token = localStorage.getItem('mentorai_token');
         if (!token || id.startsWith('off_')) {

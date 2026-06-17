@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Coins, Plus, Trash2, LineChart, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface StockHolding {
   id: string;
@@ -18,15 +19,12 @@ interface GoldHolding {
 const FMT = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
 export default function InvestmentsTracker() {
-  const [stocks, setStocks] = useState<StockHolding[]>([
-    { id: '1', symbol: 'RELIANCE', name: 'Reliance Industries', shares: 10, buyPrice: 2400, currentPrice: 2950 },
-    { id: '2', symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', shares: 25, buyPrice: 1550, currentPrice: 1620 },
-    { id: '3', symbol: 'INFY', name: 'Infosys Ltd', shares: 15, buyPrice: 1420, currentPrice: 1480 }
-  ]);
-  const [gold, setGold] = useState<GoldHolding>({
-    grams: 25,
-    buyPricePerGram: 6200
-  });
+  const { userKey } = useAuth();
+  const STOCKS_KEY = userKey('investments_stocks');
+  const GOLD_KEY = userKey('investments_gold');
+
+  const [stocks, setStocks] = useState<StockHolding[]>([]);
+  const [gold, setGold] = useState<GoldHolding>({ grams: 0, buyPricePerGram: 0 });
 
   const [stockForm, setStockForm] = useState({
     symbol: '',
@@ -48,15 +46,15 @@ export default function InvestmentsTracker() {
 
   // Load from LocalStorage
   useEffect(() => {
-    const savedStocks = localStorage.getItem('mentorai_investments_stocks');
+    const savedStocks = localStorage.getItem(STOCKS_KEY);
     if (savedStocks) {
       try { setStocks(JSON.parse(savedStocks)); } catch (e) { console.error(e); }
     }
-    const savedGold = localStorage.getItem('mentorai_investments_gold');
+    const savedGold = localStorage.getItem(GOLD_KEY);
     if (savedGold) {
       try { setGold(JSON.parse(savedGold)); } catch (e) { console.error(e); }
     }
-  }, []);
+  }, [STOCKS_KEY]);
 
   // Sync / Tick Prices
   useEffect(() => {
@@ -88,7 +86,7 @@ export default function InvestmentsTracker() {
 
   const saveStocks = (updated: StockHolding[]) => {
     setStocks(updated);
-    localStorage.setItem('mentorai_investments_stocks', JSON.stringify(updated));
+    localStorage.setItem(STOCKS_KEY, JSON.stringify(updated));
   };
 
   const handleAddStock = (e: React.FormEvent) => {
@@ -124,7 +122,7 @@ export default function InvestmentsTracker() {
       buyPricePerGram: Number(goldForm.buyPricePerGram)
     };
     setGold(updated);
-    localStorage.setItem('mentorai_investments_gold', JSON.stringify(updated));
+    localStorage.setItem(GOLD_KEY, JSON.stringify(updated));
     setGoldForm({ grams: '', buyPricePerGram: '' });
   };
 

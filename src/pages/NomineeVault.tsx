@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Lock, Trash2, ShieldAlert, FileText, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface AssetNominee {
   id: string;
@@ -17,11 +18,9 @@ const ASSET_TYPES = ['Savings Account', 'Mutual Funds', 'Stocks', 'Gold', 'Insur
 const FMT = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export default function NomineeVault() {
-  const [assets, setAssets] = useState<AssetNominee[]>([
-    { id: '1', assetName: 'HDFC Savings Account', assetType: 'Savings Account', institution: 'HDFC Bank', valuation: 320000, nomineeName: 'Aarti Sharma (Spouse)', nomineeContact: '9876543210', sharePct: 100 },
-    { id: '2', assetName: 'Nifty ETF Port', assetType: 'Stocks', institution: 'Zerodha', valuation: 450000, nomineeName: 'Rajesh Sharma (Brother)', nomineeContact: '9812345670', sharePct: 50 },
-    { id: '3', assetName: 'Term Insurance Plan', assetType: 'Insurance', institution: 'LIC India', valuation: 10000000, nomineeName: 'Aarti Sharma (Spouse)', nomineeContact: '9876543210', sharePct: 100 }
-  ]);
+  const { userKey } = useAuth();
+  const NOMINEE_KEY = userKey('nominee_assets');
+  const [assets, setAssets] = useState<AssetNominee[]>([]);
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -36,15 +35,15 @@ export default function NomineeVault() {
 
   // Load from LocalStorage
   useEffect(() => {
-    const saved = localStorage.getItem('mentorai_nominee_assets');
+    const saved = localStorage.getItem(NOMINEE_KEY);
     if (saved) {
       try { setAssets(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
-  }, []);
+  }, [NOMINEE_KEY]);
 
   const saveAssets = (updated: AssetNominee[]) => {
     setAssets(updated);
-    localStorage.setItem('mentorai_nominee_assets', JSON.stringify(updated));
+    localStorage.setItem(NOMINEE_KEY, JSON.stringify(updated));
   };
 
   const handleAdd = (e: React.FormEvent) => {

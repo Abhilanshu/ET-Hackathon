@@ -133,7 +133,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="app-container">
       <nav className="sidebar glass-panel" style={{ height: '100vh', overflowY: 'auto', position: 'sticky', top: 0 }}>
         <div className="logo-container" style={{ marginBottom: '2rem' }}>
-          <div className="logo-icon">▲</div>
+          <img src="/logo.png" alt="MentorAI" style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' }} />
           <h2 className="logo-text">Mentor<span className="text-gradient-primary">AI</span></h2>
         </div>
 

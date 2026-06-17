@@ -21,11 +21,13 @@ type AuthContextType = {
   logout: () => void;
   connectBankToDB: (bankName: string) => Promise<boolean>;
   isAuthenticated: boolean;
+  /** Returns a user-scoped localStorage key so data never leaks between accounts */
+  userKey: (key: string) => string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ─── Local user store (mock DB in localStorage) ───────────────────────────────
+// ─── Local user store (the registry of all accounts, shared) ─────────────────
 const LOCAL_USERS_KEY = 'mentorai_local_users';
 
 function getLocalUsers(): { email: string; password: string; name: string; id: string }[] {
@@ -37,13 +39,26 @@ function saveLocalUsers(users: ReturnType<typeof getLocalUsers>) {
 }
 
 function mockToken(id: string) {
-  // Simple base64 mock token (not for production — dev/demo only)
   return btoa(JSON.stringify({ id, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
+}
+
+/** Clear all session-level keys that belong to a specific user's session */
+function clearSessionKeys() {
+  // Only remove session/active-user keys — NOT the user registry or other users' data
+  ['mentorai_user', 'mentorai_token'].forEach(k => localStorage.removeItem(k));
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+
+  /** Generates a user-scoped key: e.g. "mentorai_local_abc123_expenses" */
+  const userKey = (key: string): string => {
+    const u = user || (() => {
+      try { return JSON.parse(localStorage.getItem('mentorai_user') || 'null'); } catch { return null; }
+    })();
+    return `mentorai_${u?.id || 'anon'}_${key}`;
+  };
 
   const fetchPortfolio = async () => {
     const token = localStorage.getItem('mentorai_token');
@@ -54,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) setPortfolio(await res.json());
     } catch {
-      // Server offline — portfolio stays null (not critical)
+      // Server offline — portfolio stays null
     }
   };
 
@@ -70,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) { setPortfolio(await res.json()); return true; }
     } catch { /* server offline */ }
 
-    // Fallback: mock bank connection locally
+    // Fallback: mock bank connection locally (scoped to this user)
     const mockPortfolio: Portfolio = {
       bankConnected: true,
       bankName,
@@ -89,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ─── Login: try API → fallback to localStorage mock ───────────────────────
+  // ─── Login ────────────────────────────────────────────────────────────────
   const login = async (email: string, password: string): Promise<boolean> => {
     // 1. Try live server
     try {
@@ -106,13 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchPortfolio();
         return true;
       }
-      // Server responded with 4xx — credentials actually wrong, don't fall through
       if (res.status < 500) return false;
     } catch {
-      // Server unreachable — use local mock
+      // Server unreachable — use local fallback
     }
 
-    // 2. Offline fallback: check localStorage user store
+    // 2. Offline fallback: check localStorage user registry
     const users = getLocalUsers();
     const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
     if (!found) return false;
@@ -125,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  // ─── Register: try API → fallback to localStorage mock ────────────────────
+  // ─── Register ─────────────────────────────────────────────────────────────
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     // 1. Try live server
     try {
@@ -143,17 +157,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (res.status < 500) return false;
     } catch {
-      // Server unreachable — use local mock
+      // Server unreachable — use local fallback
     }
 
-    // 2. Offline fallback: save to localStorage user store
+    // 2. Offline fallback: save to localStorage user registry
     const users = getLocalUsers();
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return false; // user already exists locally
+      return false; // user already exists
     }
 
     const id = `local_${Date.now()}`;
-    users.push({ id, name, email, password }); // NOTE: plain text only in this offline demo mode
+    users.push({ id, name, email, password });
     saveLocalUsers(users);
 
     const userData: User = { id, name, email };
@@ -164,15 +178,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  // ─── Logout: clear session only, NOT other users' data ───────────────────
   const logout = () => {
     setUser(null);
     setPortfolio(null);
-    localStorage.removeItem('mentorai_user');
-    localStorage.removeItem('mentorai_token');
+    clearSessionKeys();
   };
 
   return (
-    <AuthContext.Provider value={{ user, portfolio, login, register, logout, connectBankToDB, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, portfolio, login, register, logout, connectBankToDB, isAuthenticated: !!user, userKey }}>
       {children}
     </AuthContext.Provider>
   );

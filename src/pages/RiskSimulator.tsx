@@ -49,7 +49,9 @@ const CRISES: CrisisScenario[] = [
 const FMT = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
 export default function RiskSimulator() {
-  const { portfolio } = useAuth();
+  const { portfolio, userKey } = useAuth();
+  const STOCKS_KEY = userKey('investments_stocks');
+  const GOLD_KEY = userKey('investments_gold');
   
   const [selectedCrisisKey, setSelectedCrisisKey] = useState<string>(CRISES[0].key);
   const [customLoss, setCustomLoss] = useState<number>(30); // 30% drop custom slider
@@ -76,7 +78,7 @@ export default function RiskSimulator() {
       cashVal = portfolio.totalCorpus * 0.05;
     }
 
-    const savedStocks = localStorage.getItem('mentorai_investments_stocks');
+    const savedStocks = localStorage.getItem(STOCKS_KEY);
     if (savedStocks) {
       try {
         const parsed = JSON.parse(savedStocks);
@@ -84,7 +86,7 @@ export default function RiskSimulator() {
       } catch (e) { console.error(e); }
     }
 
-    const savedGold = localStorage.getItem('mentorai_investments_gold');
+    const savedGold = localStorage.getItem(GOLD_KEY);
     let goldVal = 180000;
     if (savedGold) {
       try {
@@ -99,7 +101,7 @@ export default function RiskSimulator() {
       gold: goldVal,
       cash: cashVal
     });
-  }, [portfolio]);
+  }, [portfolio, STOCKS_KEY, GOLD_KEY]);
 
   const totalPortfolioValue = useMemo(() => {
     return portfolioSplits.equity + portfolioSplits.debt + portfolioSplits.gold + portfolioSplits.cash;
