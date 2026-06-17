@@ -23,7 +23,7 @@ export default function Landing() {
                 zIndex: 100
             }}>
                 <div className="logo-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <img src="/logo.png" alt="MentorAI" style={{ width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <img src="/logo-v2.png" alt="MentorAI" style={{ width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover' }} />
                     <h2 className="logo-text" style={{ fontSize: '1.5rem', fontWeight: 800 }}>Mentor<span className="text-gradient-primary">AI</span></h2>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
